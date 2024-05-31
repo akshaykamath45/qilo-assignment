@@ -4,30 +4,33 @@ import "./WeatherCard.css";
 
 const AverageWeatherCard = ({ data }) => {
   return (
-    <main className="p-12">
+    <div className="p-12">
       <Title style={{ color: "black", marginBottom: "15px" }}>
         Weather Data for the Past 7 Days
       </Title>
 
-      <div className="averages">
+      <div
+        className="averages"
+        style={{ display: "flex", justifyContent: "center" }}
+      >
         <div className="card">
-          Avg Temp:{" "}
+          Average Temperature:{" "}
           {data.avgTemp !== null ? `${data.avgTemp.toFixed(2)}°C` : "N/A"}
         </div>
         <div className="card">
-          Avg Rainfall:{" "}
+          Average Rainfall:{" "}
           {data.avgPrecipitation !== null
             ? `${data.avgPrecipitation.toFixed(2)} mm`
             : "N/A"}
         </div>
         <div className="card">
-          Avg Humidity:{" "}
+          Average Humidity:{" "}
           {data.avgHumidity !== null
             ? `${data.avgHumidity.toFixed(2)}%`
             : "N/A"}
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 
