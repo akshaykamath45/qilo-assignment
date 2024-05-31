@@ -5,6 +5,7 @@ import { sampleData } from "./sampleData";
 import { SearchBar } from "./components/SearchBar";
 import { WeatherCard } from "./components/WeatherCard";
 import AverageWeatherCard from "./components/AverageWeatherCard";
+import BarChart from "./components/BarChart";
 import axios from "axios";
 import Papa from "papaparse";
 
@@ -20,9 +21,11 @@ function App() {
   const [averageWeatherData, setAverageWeatherData] =
     useState(sampleAverageData);
   const [isLoading, setIsLoading] = useState(false);
+  const [temperatureData, setTemperatureData] = useState([]);
 
   const toast = useToast();
   const API_KEY = process.env.REACT_APP_API_KEY;
+  const RAPID_API_KEY = process.env.REACT_APP_RAPID_API_KEY;
 
   const getWeatherData = async () => {
     setIsLoading(true);
@@ -64,7 +67,7 @@ function App() {
   const handleSearch = (e) => {
     if (inputCityName.length === 0) {
       toast({
-        title: `Minimum character should be 1`,
+        title: `Enter city name`,
         status: "error",
         isClosable: true,
       });
@@ -77,14 +80,26 @@ function App() {
   };
 
   const fetchAndCalculateAverages = async () => {
+    const today = new Date();
+    const eightDaysAgo = new Date();
+    const oneDayAgo = new Date();
+    eightDaysAgo.setDate(today.getDate() - 8);
+    oneDayAgo.setDate(today.getDate() - 1);
+    const formatDate = (date) => {
+      return date.toISOString().split("T")[0] + "T00:00:00";
+    };
+
+    const startDateTime = formatDate(eightDaysAgo);
+    const endDateTime = formatDate(oneDayAgo);
+
     const options = {
       method: "GET",
       url: "https://visual-crossing-weather.p.rapidapi.com/history",
       params: {
-        startDateTime: "2024-05-20T00:00:00",
+        startDateTime,
         aggregateHours: "24",
         location: cityName,
-        endDateTime: "2024-05-24T00:00:00",
+        endDateTime,
         unitGroup: "us",
         dayStartTime: "8:00:00",
         contentType: "csv",
@@ -92,7 +107,7 @@ function App() {
         shortColumnNames: "0",
       },
       headers: {
-        "X-RapidAPI-Key": "9288b20022msh4a914991d07f848p162afcjsn1b0723da782d",
+        "X-RapidAPI-Key": `${RAPID_API_KEY}`,
         "X-RapidAPI-Host": "visual-crossing-weather.p.rapidapi.com",
       },
     };
@@ -106,6 +121,36 @@ function App() {
         complete: function (results) {
           const data = results.data;
 
+          let temperatureData = [];
+          let dateTemperatureMap = {};
+
+          data.forEach((row) => {
+            if (row["Temperature"]) {
+              const temperatureCelsius =
+                ((parseFloat(row["Temperature"]) - 32) * 5) / 9;
+              const date = row["Date time"];
+
+              if (!dateTemperatureMap[date]) {
+                dateTemperatureMap[date] = [];
+              }
+
+              dateTemperatureMap[date].push(temperatureCelsius);
+            }
+          });
+
+          for (const [date, temperatures] of Object.entries(
+            dateTemperatureMap
+          )) {
+            const avgTemperature =
+              temperatures.reduce((a, b) => a + b, 0) / temperatures.length;
+            temperatureData.push({
+              date: date,
+              temperature: avgTemperature,
+            });
+          }
+
+          setTemperatureData(temperatureData);
+
           let totalTemperature = 0;
           let totalHumidity = 0;
           let totalPrecipitation = 0;
@@ -117,7 +162,8 @@ function App() {
               row["Relative Humidity"] &&
               row["Precipitation"]
             ) {
-              totalTemperature += parseFloat(row["Temperature"]);
+              totalTemperature +=
+                ((parseFloat(row["Temperature"]) - 32) * 5) / 9;
               totalHumidity += parseFloat(row["Relative Humidity"]);
               totalPrecipitation += parseFloat(row["Precipitation"]);
               daysCount++;
@@ -139,7 +185,6 @@ function App() {
       console.error("Error fetching data: ", error);
     }
   };
-
   const fetchUsersLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -217,6 +262,7 @@ function App() {
           ></SearchBar>
           <WeatherCard data={data}></WeatherCard>
           <AverageWeatherCard data={averageWeatherData}></AverageWeatherCard>
+          <BarChart temperatureData={temperatureData}></BarChart>
         </div>
       )}
     </div>
