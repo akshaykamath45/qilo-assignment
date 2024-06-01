@@ -1,14 +1,22 @@
+// /src/components/BarChart.jsx
 import React, { useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
 
 const BarChart = ({ temperatureData }) => {
   const chartRef = useRef();
+  const chartInstanceRef = useRef(null);
 
   useEffect(() => {
-    if (chartRef && chartRef.current) {
+    if (chartRef.current) {
       const ctx = chartRef.current.getContext("2d");
 
-      new Chart(ctx, {
+      // destroying existing chart instance if it exists
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.destroy();
+      }
+
+      // new chart instance
+      chartInstanceRef.current = new Chart(ctx, {
         type: "bar",
         data: {
           labels: temperatureData.map((data) => data.date),
@@ -41,6 +49,13 @@ const BarChart = ({ temperatureData }) => {
         },
       });
     }
+
+    // cleanup function to destroy chart instance when component unmounts or before re-creating it
+    return () => {
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.destroy();
+      }
+    };
   }, [temperatureData]);
 
   return <canvas ref={chartRef} />;
